@@ -5,7 +5,21 @@
   "repository": "git@github.com:VincentCordobes/prose-language-server.git",
   "author": "Vincent Cordobes <vincent.cordobes@gmail.com>",
   "license": "MIT",
+  "main": "src/index.ts",
+  "bin": {
+    "prose-language-server": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
   "devDependencies": {
     "typescript": "^3.5.1"
+  },
+  "dependencies": {
+    "@types/jest": "^24.0.13",
+    "@types/node": "^12.0.4",
+    "jest": "^24.8.0",
+    "ts-jest": "^24.0.2",
+    "vscode-languageserver": "^5.2.1"
   }
 }
