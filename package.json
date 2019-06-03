@@ -1,0 +1,11 @@
+{
+  "name": "prose-language-server",
+  "version": "1.0.0",
+  "description": "Prose Language Server implementation",
+  "repository": "git@github.com:VincentCordobes/prose-language-server.git",
+  "author": "Vincent Cordobes <vincent.cordobes@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^3.5.1"
+  }
+}

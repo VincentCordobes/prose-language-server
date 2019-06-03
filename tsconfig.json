@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    /* Basic Options */
+    "incremental": true,
+    "target": "es5",
+    "module": "esnext",
+    "lib": ["es2015"],
+    "sourceMap": true,
+    "removeComments": true,
+
+    /* Strict Type-Checking Options */
+    "strict": true,
+
+    /* Additional Checks */
+    "noUnusedLocals": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* Module Resolution Options */
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {},
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
+  }
+}
