@@ -5,19 +5,15 @@ import {
   TextDocuments,
   TextDocumentPositionParams,
   Hover,
-  Definition,
-  DocumentSymbolParams,
-  SymbolInformation,
-  DocumentHighlight,
-  ReferenceParams,
-  Location,
   CompletionItem,
-  Range,
   StreamMessageReader,
-  StreamMessageWriter
+  StreamMessageWriter,
+  TextDocument,
+  Diagnostic
 } from "vscode-languageserver";
+import axios from "axios";
 
-import { formatError } from "./utils/runner";
+import { formatError, debounce } from "./utils/runner";
 
 const connection = createConnection(
   new StreamMessageReader(process.stdin),
@@ -35,29 +31,33 @@ const documents = new TextDocuments();
 
 documents.listen(connection);
 
-documents.onDidClose(_ => {
-  // clean some stuff
-});
 connection.onShutdown(() => {
   // clean some stuff
 });
+
+// const nls = spawn("languagetool-server");
+//
+// nls.stdout.setEncoding("utf-8");
+// nls.stdout.on("data", data => {
+//   console.log(data);
+// });
+//
+// nls.stderr.setEncoding("utf-8");
+// nls.stderr.on("data", data => {
+//   console.log(data);
+// });
 
 // After the server has started the client sends an initialize request. The server receives
 // in the passed params the rootPath of the workspace plus the client capabilities.
 connection.onInitialize(async params => {
   connection.console.log("Initialized server");
-
   return {
     capabilities: {
       textDocumentSync: documents.syncKind,
       completionProvider: {
         resolveProvider: true
       },
-      hoverProvider: true,
-      documentHighlightProvider: true,
-      definitionProvider: true,
-      documentSymbolProvider: true,
-      referencesProvider: true
+      hoverProvider: true
     }
   };
 });
@@ -71,58 +71,20 @@ connection.onHover((pos: TextDocumentPositionParams): Hover => {
     contents: {
       kind: "markdown",
       value: [
-        "## This is a hover test",
-        "with some very interesting definition here",
-        "```javascript",
-        "const a = 5",
-        "```"
+        "# beautiful",
+        "adjective ",
+        "pleasing the senses or mind aesthetically"
       ].join("\n")
     }
   };
 });
 
-connection.onDefinition((pos: TextDocumentPositionParams): Definition => {
-  connection.console.log(
-    `Asked for definition at ${pos.position.line}:${pos.position.character}`
-  );
-  // const word = this.getWordAtPoint(pos);
-  return [];
-});
-
-connection.onDocumentSymbol(
-  (params: DocumentSymbolParams): SymbolInformation[] => {
-    return [
-      {
-        kind: 1,
-        name: "documentsymbol",
-        location: {
-          range: aRange(),
-          uri: params.textDocument.uri
-        }
-      }
-    ];
-  }
-);
-
-connection.onDocumentHighlight(
-  (pos: TextDocumentPositionParams): DocumentHighlight[] => {
-    return [{ range: aRange() }];
-  }
-);
-
-connection.onReferences((params: ReferenceParams): Location[] => {
-  return [{ uri: params.textDocument.uri, range: aRange() }];
+documents.onDidChangeContent(async change => {
+  debounce(validateTextDocument, 1000)(change.document);
 });
 
 connection.onCompletion((pos: TextDocumentPositionParams): CompletionItem[] => {
-  console.log(
-    `Asked for completions at ${pos.position.line}:${pos.position.character}`
-  );
-  return [
-    {
-      label: "TOTO"
-    }
-  ];
+  return [{ label: "TOTO" }];
 });
 
 connection.onCompletionResolve((item: CompletionItem): Promise<
@@ -133,17 +95,33 @@ connection.onCompletionResolve((item: CompletionItem): Promise<
   });
 });
 
-function aRange(): Range {
-  return {
-    start: {
-      character: 0,
-      line: 0
-    },
-    end: {
-      character: 5,
-      line: 0
+async function validateTextDocument(textDocument: TextDocument): Promise<void> {
+  const { data } = await axios.post("http://localhost:8081/v2/check", null, {
+    params: {
+      // language: "en-US",
+      language: "fr",
+      text: textDocument.getText()
     }
-  };
+  });
+
+  if (!data.matches) {
+    return;
+  }
+  const diagnostics = data.matches.map((match: any) => {
+    const diagnotic: Diagnostic = {
+      message: match.message,
+      range: {
+        start: textDocument.positionAt(match.offset),
+        end: textDocument.positionAt(match.offset + match.length)
+      }
+    };
+    return diagnotic;
+  });
+
+  connection.sendDiagnostics({
+    uri: textDocument.uri,
+    diagnostics
+  });
 }
 
 connection.listen();
