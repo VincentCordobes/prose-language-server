@@ -9,15 +9,20 @@ import {
   StreamMessageReader,
   StreamMessageWriter,
   TextDocument,
-  Diagnostic
+  Diagnostic,
+  CodeActionParams,
+  DiagnosticRelatedInformation,
+  CodeAction,
+  CodeActionKind,
 } from "vscode-languageserver";
 import axios from "axios";
 
-import { formatError, debounce } from "./utils/runner";
+import { flatMap, formatError, debounce, rangeOverlaps } from "./utils";
+import { LanguageToolResponse } from "src/language-tool-types";
 
 const connection = createConnection(
   new StreamMessageReader(process.stdin),
-  new StreamMessageWriter(process.stdout)
+  new StreamMessageWriter(process.stdout),
 );
 
 console.log = connection.console.log.bind(connection.console);
@@ -49,22 +54,23 @@ connection.onShutdown(() => {
 
 // After the server has started the client sends an initialize request. The server receives
 // in the passed params the rootPath of the workspace plus the client capabilities.
-connection.onInitialize(async params => {
+connection.onInitialize(() => {
   connection.console.log("Initialized server");
   return {
     capabilities: {
       textDocumentSync: documents.syncKind,
       completionProvider: {
-        resolveProvider: true
+        resolveProvider: true,
       },
-      hoverProvider: true
-    }
+      hoverProvider: true,
+      codeActionProvider: true,
+    },
   };
 });
 
 connection.onHover((pos: TextDocumentPositionParams): Hover => {
   connection.console.log(
-    `Hovering over ${pos.position.line}:${pos.position.character}`
+    `Hovering over ${pos.position.line}:${pos.position.character}`,
   );
 
   return {
@@ -73,9 +79,9 @@ connection.onHover((pos: TextDocumentPositionParams): Hover => {
       value: [
         "# beautiful",
         "adjective ",
-        "pleasing the senses or mind aesthetically"
-      ].join("\n")
-    }
+        "pleasing the senses or mind aesthetically",
+      ].join("\n"),
+    },
   };
 });
 
@@ -83,44 +89,96 @@ documents.onDidChangeContent(async change => {
   debounce(validateTextDocument, 1000)(change.document);
 });
 
-connection.onCompletion((pos: TextDocumentPositionParams): CompletionItem[] => {
+connection.onCompletion((): CompletionItem[] => {
   return [{ label: "TOTO" }];
 });
 
-connection.onCompletionResolve((item: CompletionItem): Promise<
-  CompletionItem
-> => {
+connection.onCompletionResolve((): Promise<CompletionItem> => {
   return Promise.resolve({
-    label: "My prediction"
+    label: "My prediction",
   });
 });
 
+connection.onCodeAction((params: CodeActionParams) => {
+  const document = documents.get(params.textDocument.uri);
+  if (!document) return;
+
+  const { diagnostics } = params.context;
+
+  const lineDiagnostics = diagnostics.filter(diagnostic =>
+    rangeOverlaps(params.range, diagnostic.range, { ignoreCharacters: true }),
+  );
+
+  const quickfixes = flatMap(
+    diagnostic =>
+      (diagnostic.relatedInformation || []).map(info => ({
+        value: info.message,
+        range: diagnostic.range,
+      })),
+    lineDiagnostics,
+  );
+
+  const codeActions: CodeAction[] = quickfixes.map(({ value, range }) => ({
+    title: value,
+    kind: CodeActionKind.QuickFix,
+    edit: {
+      changes: {
+        [document.uri]: [{ range, newText: value }],
+      },
+    },
+  }));
+
+  return codeActions;
+});
+
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-  const { data } = await axios.post("http://localhost:8081/v2/check", null, {
-    params: {
-      // language: "en-US",
-      language: "fr",
-      text: textDocument.getText()
-    }
-  });
+  const { uri } = textDocument;
+  const { data } = await axios.post<LanguageToolResponse>(
+    "http://localhost:8081/v2/check",
+    null,
+    {
+      params: {
+        language: "en-US",
+        // language: "fr",
+        text: textDocument.getText(),
+      },
+    },
+  );
 
   if (!data.matches) {
     return;
   }
-  const diagnostics = data.matches.map((match: any) => {
-    const diagnotic: Diagnostic = {
-      message: match.message,
-      range: {
-        start: textDocument.positionAt(match.offset),
-        end: textDocument.positionAt(match.offset + match.length)
-      }
+  const diagnostics = data.matches.map(match => {
+    const range = {
+      start: textDocument.positionAt(match.offset),
+      end: textDocument.positionAt(match.offset + match.length),
     };
+
+    const relatedInformation = match.replacements
+      ? match.replacements.map(({ value }) => {
+          const informations: DiagnosticRelatedInformation = {
+            message: value,
+            location: {
+              range,
+              uri,
+            },
+          };
+          return informations;
+        })
+      : [];
+
+    const diagnotic: Diagnostic = {
+      message: match.shortMessage || match.message,
+      range,
+      relatedInformation,
+    };
+
     return diagnotic;
   });
 
   connection.sendDiagnostics({
-    uri: textDocument.uri,
-    diagnostics
+    uri,
+    diagnostics,
   });
 }
 
