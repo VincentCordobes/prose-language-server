@@ -18,7 +18,8 @@ import {
 import axios from "axios";
 
 import { flatMap, formatError, debounce, rangeOverlaps } from "./utils";
-import { LanguageToolResponse } from "src/language-tool-types";
+import { LanguageToolResponse } from "./language-tool-types";
+import { spawn } from "child_process";
 
 const connection = createConnection(
   new StreamMessageReader(process.stdin),
@@ -33,24 +34,34 @@ process.on("unhandledRejection", (e: any) => {
 });
 
 const documents = new TextDocuments();
-
 documents.listen(connection);
 
-connection.onShutdown(() => {
-  // clean some stuff
+let isLanguageToolReady = false;
+let languageToolOutput = "";
+
+const languageTool = spawn("languagetool-server");
+languageTool.stdout.setEncoding("utf-8");
+languageTool.stdout.on("data", data => {
+  if (!isLanguageToolReady) {
+    languageToolOutput += data;
+    if (languageToolOutput.indexOf("Server started") !== -1) {
+      console.log("LanguageTool ready!");
+      isLanguageToolReady = true;
+
+      documents.all().forEach(document => {
+        console.log(`Validating ${document.uri}`);
+        validateTextDocument(document);
+      });
+    }
+  }
 });
 
-// const nls = spawn("languagetool-server");
-//
-// nls.stdout.setEncoding("utf-8");
-// nls.stdout.on("data", data => {
-//   console.log(data);
-// });
-//
-// nls.stderr.setEncoding("utf-8");
-// nls.stderr.on("data", data => {
-//   console.log(data);
-// });
+languageTool.stderr.setEncoding("utf-8");
+languageTool.stderr.on("data", data => {
+  console.log(data);
+});
+
+process.on("exit", () => languageTool.kill());
 
 // After the server has started the client sends an initialize request. The server receives
 // in the passed params the rootPath of the workspace plus the client capabilities.
@@ -132,6 +143,11 @@ connection.onCodeAction((params: CodeActionParams) => {
 });
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
+  if (!isLanguageToolReady) {
+    console.log("LanguageTool not ready yet => skipping");
+    return;
+  }
+
   const { uri } = textDocument;
   const { data } = await axios.post<LanguageToolResponse>(
     "http://localhost:8081/v2/check",
@@ -183,3 +199,4 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 }
 
 connection.listen();
+connection.window.showInformationMessage("Starting language server");
