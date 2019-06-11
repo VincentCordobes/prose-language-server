@@ -36,17 +36,22 @@ process.on("unhandledRejection", (e: any) => {
 const documents = new TextDocuments();
 documents.listen(connection);
 
-let isLanguageToolReady = false;
+let languageToolReady = false;
 let languageToolOutput = "";
 
 const languageTool = spawn("languagetool-server");
+
 languageTool.stdout.setEncoding("utf-8");
+languageTool.stderr.setEncoding("utf-8");
+
 languageTool.stdout.on("data", data => {
-  if (!isLanguageToolReady) {
+  console.log(data);
+
+  if (!languageToolReady) {
     languageToolOutput += data;
     if (languageToolOutput.indexOf("Server started") !== -1) {
       console.log("LanguageTool ready!");
-      isLanguageToolReady = true;
+      languageToolReady = true;
 
       documents.all().forEach(document => {
         console.log(`Validating ${document.uri}`);
@@ -56,9 +61,17 @@ languageTool.stdout.on("data", data => {
   }
 });
 
-languageTool.stderr.setEncoding("utf-8");
 languageTool.stderr.on("data", data => {
   console.log(data);
+});
+
+languageTool.on("error", (err: any) => {
+  console.log(err);
+  if (err.errno === "ENOENT") {
+    connection.window.showWarningMessage(
+      "LanguageTool not found. Please install it.",
+    );
+  }
 });
 
 process.on("exit", () => languageTool.kill());
@@ -143,7 +156,7 @@ connection.onCodeAction((params: CodeActionParams) => {
 });
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-  if (!isLanguageToolReady) {
+  if (!languageToolReady) {
     console.log("LanguageTool not ready yet => skipping");
     return;
   }
@@ -154,8 +167,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
     null,
     {
       params: {
-        language: "en-US",
-        // language: "fr",
+        language: "auto",
         text: textDocument.getText(),
       },
     },
@@ -164,6 +176,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
   if (!data.matches) {
     return;
   }
+
   const diagnostics = data.matches.map(match => {
     const range = {
       start: textDocument.positionAt(match.offset),
@@ -199,4 +212,3 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 }
 
 connection.listen();
-connection.window.showInformationMessage("Starting language server");
