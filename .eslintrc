@@ -1,0 +1,12 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "plugins": ["@typescript-eslint"],
+  "extends": [],
+  "rules": {
+    "no-use-before-define": ["warn", { "functions": true, "variables": true }]
+  }
+}

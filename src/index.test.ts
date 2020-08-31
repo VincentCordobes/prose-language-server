@@ -1,8 +1,19 @@
 import { Range } from "vscode-languageserver";
 import { rangeOverlaps } from "./utils";
 
+function toRange(rangeStr: string): Range {
+  const res = /\[\((\d+),(\d+)\) \((\d+),(\d+)\)\]/.exec(rangeStr);
+  if (!res) {
+    throw new Error(`${rangeStr} is not a range`);
+  }
+  return {
+    start: { line: +res[1], character: +res[2] },
+    end: { line: +res[3], character: +res[4] },
+  };
+}
+
 describe("Range overlaps", () => {
-  test.each<any>([
+  test.each([
     ["[(2,0) (2,0)]", "[(1,0) (4,0)]", true],
     ["[(2,0) (2,0)]", "[(3,0) (4,0)]", false],
     ["[(2,0) (2,0)]", "[(1,0) (1,0)]", false],
@@ -23,14 +34,3 @@ describe("Range overlaps", () => {
     expect(result).toBe(expected);
   });
 });
-
-function toRange(rangeStr: string): Range {
-  const res = /\[\((\d+),(\d+)\) \((\d+),(\d+)\)\]/.exec(rangeStr);
-  if (!res) {
-    throw new Error(`${rangeStr} is not a range`);
-  }
-  return {
-    start: { line: +res[1], character: +res[2] },
-    end: { line: +res[3], character: +res[4] },
-  };
-}
