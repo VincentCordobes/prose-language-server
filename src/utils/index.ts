@@ -1,9 +1,5 @@
 import { Range } from "vscode-languageserver";
 
-export function flatMap<T, U>(f: (a: T) => U[], list: T[]): U[] {
-  return list.reduce<U[]>((acc, item) => acc.concat(f(item)), []);
-}
-
 export function formatError(message: string, err: any): string {
   if (err instanceof Error) {
     let error = err;

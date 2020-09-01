@@ -16,103 +16,78 @@ import {
   CodeActionKind,
   ProposedFeatures,
   TextDocumentSyncKind,
+  ServerCapabilities,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { flatMap, formatError, debounce, rangeOverlaps } from "./utils";
+import { formatError, debounce, rangeOverlaps } from "./utils";
 import { LanguageToolResponse } from "./language_tool_types";
 import { spawn } from "child_process";
 import { URLSearchParams } from "url";
+
+import {
+  initLanguageTool,
+  stopLanguageTool,
+  LanguageToolError,
+  languageToolCheck,
+} from "./language_tool";
 
 const connection = createConnection(ProposedFeatures.all);
 
 console.log = connection.console.log.bind(connection.console);
 console.error = connection.console.error.bind(connection.console);
 
-process.on("unhandledRejection", (e: any) => {
+process.on("exit", () => stopLanguageTool());
+process.on("unhandledRejection", (e) => {
   connection.console.error(formatError(`Unhandled exception`, e));
 });
 
 const documents = new TextDocuments(TextDocument);
-documents.listen(connection);
 
-let languageToolReady = false;
-let languageToolOutput = "";
-
-const languageTool = spawn("languagetool-server");
-
-languageTool.stdout.setEncoding("utf-8");
-languageTool.stderr.setEncoding("utf-8");
-
-languageTool.stdout.on("data", (data) => {
-  console.log(data);
-
-  if (!languageToolReady) {
-    languageToolOutput += data;
-    if (languageToolOutput.indexOf("Server started") !== -1) {
-      console.log("LanguageTool ready!");
-      languageToolReady = true;
-
-      documents.all().forEach((document) => {
-        console.log(`Validating ${document.uri}`);
-        validateTextDocument(document);
-      });
-    }
-  }
-});
-
-languageTool.stderr.on("data", (data) => {
-  console.log(data);
-});
-
-languageTool.on("error", (err: any) => {
-  console.log(err);
-  if (err.errno === "ENOENT") {
+function handleLanguageToolNotFound(e: LanguageToolError) {
+  if (e === LanguageToolError.LanguageToolNotFound) {
     connection.window.showWarningMessage(
       "LanguageTool not found. Please install it.",
     );
   }
-});
+  process.exit(1);
+}
 
-process.on("exit", () => languageTool.kill());
+connection.onInitialize(async () => {
+  connection.console.log("Initialized server");
+
+  await initLanguageTool().catch(handleLanguageToolNotFound);
+
+  const serverCapabilities: ServerCapabilities = {
+    textDocumentSync: TextDocumentSyncKind.Incremental,
+    completionProvider: {
+      resolveProvider: true,
+    },
+    hoverProvider: true,
+    codeActionProvider: true,
+  };
+
+  return {
+    capabilities: serverCapabilities,
+  };
+});
 
 function buildData(text: string) {
   return { annotation: [{ text: text }] };
 }
 
-async function requestCheck(
-  textDocument: TextDocument,
-): Promise<LanguageToolResponse> {
-  const params = new URLSearchParams();
-  params.append("language", "auto");
-  params.append("text", textDocument.getText());
-
-  const response = await fetch("http://localhost:8081/v2/check", {
-    method: "post",
-    body: params,
-  });
-
-  if (!response.ok) {
-    throw new Error(response.statusText);
-  }
-
-  return response.json();
-}
-
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-  if (!languageToolReady) {
-    console.log("LanguageTool not ready yet => skipping");
-    return;
-  }
-
-  const response = await requestCheck(textDocument);
-  console.log("response = ", JSON.stringify(response, null, 5));
-
   const { uri } = textDocument;
+
+  console.log(`Validating ${uri}`);
+
+  const response = await languageToolCheck(textDocument.getText());
 
   if (!response.matches) {
     return;
   }
+
+  console.log(JSON.stringify(response, null, 5));
 
   const diagnostics = response.matches.map((match) => {
     const range = {
@@ -148,20 +123,10 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
   });
 }
 
-// After the server has started the client sends an initialize request. The server receives
-// in the passed params the rootPath of the workspace plus the client capabilities.
-connection.onInitialize(() => {
-  connection.console.log("Initialized server");
-  return {
-    capabilities: {
-      textDocumentSync: TextDocumentSyncKind.Incremental,
-      completionProvider: {
-        resolveProvider: true,
-      },
-      hoverProvider: true,
-      codeActionProvider: true,
-    },
-  };
+const validateTextDocumentd = debounce(validateTextDocument, 1000);
+
+documents.onDidChangeContent(async (change) => {
+  validateTextDocumentd(change.document);
 });
 
 connection.onHover(
@@ -182,10 +147,6 @@ connection.onHover(
     };
   },
 );
-
-documents.onDidChangeContent(async (change) => {
-  debounce(validateTextDocument, 1000)(change.document);
-});
 
 connection.onCompletion((): CompletionItem[] => {
   return [{ label: "TOTO" }];
@@ -209,13 +170,11 @@ connection.onCodeAction((params: CodeActionParams) => {
     rangeOverlaps(params.range, diagnostic.range, { ignoreCharacters: true }),
   );
 
-  const quickfixes = flatMap(
-    (diagnostic) =>
-      (diagnostic.relatedInformation || []).map((info) => ({
-        value: info.message,
-        range: diagnostic.range,
-      })),
-    lineDiagnostics,
+  const quickfixes = lineDiagnostics.flatMap((diagnostic) =>
+    (diagnostic.relatedInformation || []).map((info) => ({
+      value: info.message,
+      range: diagnostic.range,
+    })),
   );
 
   const codeActions: CodeAction[] = quickfixes.map(({ value, range }) => ({
@@ -231,4 +190,5 @@ connection.onCodeAction((params: CodeActionParams) => {
   return codeActions;
 });
 
+documents.listen(connection);
 connection.listen();
