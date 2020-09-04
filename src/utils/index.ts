@@ -12,8 +12,8 @@ export function formatError(message: string, err: any): string {
   return message;
 }
 
-export function debounce<T extends any[]>(
-  f: (...args: T) => void,
+export function debounce<T extends any[], R>(
+  f: (...args: T) => R,
   delay: number,
 ) {
   let timeout: NodeJS.Timeout;

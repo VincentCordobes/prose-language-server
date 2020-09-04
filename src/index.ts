@@ -1,17 +1,12 @@
 #!/usr/bin/env node
 
-import fetch from "node-fetch";
 import {
   createConnection,
   TextDocuments,
   TextDocumentPositionParams,
   Hover,
   CompletionItem,
-  StreamMessageReader,
-  StreamMessageWriter,
-  Diagnostic,
   CodeActionParams,
-  DiagnosticRelatedInformation,
   CodeAction,
   CodeActionKind,
   ProposedFeatures,
@@ -21,25 +16,16 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { formatError, debounce, rangeOverlaps } from "./utils";
-import { LanguageToolResponse } from "./language_tool_types";
-import { spawn } from "child_process";
-import { URLSearchParams } from "url";
-
-import {
-  initLanguageTool,
-  stopLanguageTool,
-  LanguageToolError,
-  languageToolCheck,
-} from "./language_tool";
+import logger from "./logger";
+import { initLanguageTool, LanguageToolError } from "./language_tool";
+import { getDiagnostics } from "./server";
 
 const connection = createConnection(ProposedFeatures.all);
 
-console.log = connection.console.log.bind(connection.console);
-console.error = connection.console.error.bind(connection.console);
+logger.init(connection.console);
 
-process.on("exit", () => stopLanguageTool());
 process.on("unhandledRejection", (e) => {
-  connection.console.error(formatError(`Unhandled exception`, e));
+  logger.error(formatError(`Unhandled exception`, e));
 });
 
 const documents = new TextDocuments(TextDocument);
@@ -54,7 +40,7 @@ function handleLanguageToolNotFound(e: LanguageToolError) {
 }
 
 connection.onInitialize(async () => {
-  connection.console.log("Initialized server");
+  logger.info("Initialized server");
 
   await initLanguageTool().catch(handleLanguageToolNotFound);
 
@@ -76,64 +62,29 @@ function buildData(text: string) {
   return { annotation: [{ text: text }] };
 }
 
-async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-  const { uri } = textDocument;
+const validateTextDocument = debounce(
+  async (textDocument: TextDocument): Promise<void> => {
+    const { uri } = textDocument;
 
-  console.log(`Validating ${uri}`);
+    logger.info(`Validating ${uri}`);
 
-  const response = await languageToolCheck(textDocument.getText());
+    const diagnostics = await getDiagnostics(textDocument);
 
-  if (!response.matches) {
-    return;
-  }
+    connection.sendDiagnostics({
+      uri,
+      diagnostics,
+    });
+  },
+  1000,
+);
 
-  console.log(JSON.stringify(response, null, 5));
-
-  const diagnostics = response.matches.map((match) => {
-    const range = {
-      start: textDocument.positionAt(match.offset),
-      end: textDocument.positionAt(match.offset + match.length),
-    };
-
-    const relatedInformation = match.replacements
-      ? match.replacements.map(({ value }) => {
-          const informations: DiagnosticRelatedInformation = {
-            message: value,
-            location: {
-              range,
-              uri,
-            },
-          };
-          return informations;
-        })
-      : [];
-
-    const diagnotic: Diagnostic = {
-      message: match.shortMessage || match.message,
-      range,
-      relatedInformation,
-    };
-
-    return diagnotic;
-  });
-
-  connection.sendDiagnostics({
-    uri,
-    diagnostics,
-  });
-}
-
-const validateTextDocumentd = debounce(validateTextDocument, 1000);
-
-documents.onDidChangeContent(async (change) => {
-  validateTextDocumentd(change.document);
+documents.onDidChangeContent((change) => {
+  validateTextDocument(change.document);
 });
 
 connection.onHover(
   (pos: TextDocumentPositionParams): Hover => {
-    connection.console.log(
-      `Hovering over ${pos.position.line}:${pos.position.character}`,
-    );
+    logger.info(`Hovering over ${pos.position.line}:${pos.position.character}`);
 
     return {
       contents: {
