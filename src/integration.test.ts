@@ -1,10 +1,10 @@
 import { initLanguageTool, stopLanguageTool } from "./language_tool";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { getDiagnostics } from "./server";
+import { getDiagnostics } from "./features";
 
 jest.setTimeout(30000);
 
-describe("Check text", () => {
+describe("Check plain text", () => {
   beforeAll(() => initLanguageTool());
   afterAll(() => stopLanguageTool());
 
