@@ -74,7 +74,7 @@ async function startLanguageTool(): Promise<ChildProcess> {
     languageTool.on("error", (err: any) => {
       logger.error(err);
 
-      if (err.errno === "ENOENT") {
+      if (err.code === "ENOENT") {
         reject(LanguageToolError.LanguageToolNotFound);
       }
     });

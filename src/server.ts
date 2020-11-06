@@ -21,7 +21,6 @@ process.on("unhandledRejection", (e) => {
 });
 
 const connection = createConnection(ProposedFeatures.all);
-
 const documents = new TextDocuments(TextDocument);
 
 logger.init(connection.console);
