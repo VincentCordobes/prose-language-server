@@ -9,13 +9,14 @@ import { URLSearchParams } from "url";
 import util from "util";
 import { LanguageToolResponse } from "./language_tool_types";
 import logger from "./logger";
+import getPort from "get-port";
 
 const exec = util.promisify(childProcess.exec);
 
 let languageTool: ChildProcessWithoutNullStreams;
 let ready: boolean = false;
 let url: string = "http://localhost";
-let port: number = 8081;
+let port: number;
 
 export enum LanguageToolError {
   LanguageToolNotFound,
@@ -55,12 +56,14 @@ async function findLanguageToolPort(): Promise<number> {
 async function startLanguageTool(): Promise<ChildProcess> {
   let languageToolOutput = "";
 
-  return new Promise((resolve, reject) => {
-    if (languageTool) {
-      resolve(languageTool);
-    }
+  if (languageTool) {
+    return languageTool;
+  }
 
-    languageTool = spawn("languagetool-server", {
+  port = await getPort();
+
+  return new Promise((resolve, reject) => {
+    languageTool = spawn("languagetool-server", ["--port", String(port)], {
       detached: true,
     });
 
@@ -91,7 +94,6 @@ async function startLanguageTool(): Promise<ChildProcess> {
         logger.info("LanguageTool ready!");
 
         ready = true;
-        port = 8081;
         resolve(languageTool);
       }
     });
