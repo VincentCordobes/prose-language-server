@@ -8,7 +8,7 @@ import {
   ProposedFeatures,
   TextDocumentSyncKind,
   ServerCapabilities,
-} from "vscode-languageserver";
+} from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { formatError, debounce } from "./utils";
