@@ -89,7 +89,7 @@ function handleHover(pos: TextDocumentPositionParams): Hover {
 }
 
 function handleCompletion(): CompletionItem[] {
-  return [{ label: "TOTO" }];
+  return [{ label: "TODO" }];
 }
 
 function resolveCompletion(): Promise<CompletionItem> {

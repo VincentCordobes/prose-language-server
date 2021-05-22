@@ -1,29 +1,9 @@
-export interface LanguageToolResponse {
-  software: {
-    name: "LanguageTool";
-    version: string;
-    buildDate: string; //"2019-03-26 11:37",
-    apiVersion: number;
-    premium: boolean;
-    premiumHint: string;
-    status: string;
-  };
-  warnings: {
-    incompleteResults: boolean;
-  };
-  language: {
-    name: string;
-    code: LanguageCode;
-    detectedLanguage: {
-      name: string;
-      code: LanguageCode;
-      confidence: number; // 0.7122702
-    };
-  };
-  matches: LanguageToolMatch[];
-}
-
 export type LanguageCode = "en-US" | "fr";
+
+export interface Replacement {
+  value: string;
+  shortDescription?: string;
+}
 
 export interface LanguageToolMatch {
   message: string;
@@ -53,7 +33,27 @@ export interface LanguageToolMatch {
   contextForSureMatch: 0;
 }
 
-export interface Replacement {
-  value: string;
-  shortDescription?: string;
+export interface LanguageToolResponse {
+  software: {
+    name: "LanguageTool";
+    version: string;
+    buildDate: string; //"2019-03-26 11:37",
+    apiVersion: number;
+    premium: boolean;
+    premiumHint: string;
+    status: string;
+  };
+  warnings: {
+    incompleteResults: boolean;
+  };
+  language: {
+    name: string;
+    code: LanguageCode;
+    detectedLanguage: {
+      name: string;
+      code: LanguageCode;
+      confidence: number; // 0.7122702
+    };
+  };
+  matches: LanguageToolMatch[];
 }

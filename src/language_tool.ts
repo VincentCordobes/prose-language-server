@@ -10,8 +10,11 @@ import util from "util";
 import { LanguageToolResponse } from "./language_tool_types";
 import logger from "./logger";
 import getPort from "get-port";
+import { toAnnotation } from "./markdown";
 
 const exec = util.promisify(childProcess.exec);
+
+const DISABLED_RULES = ["WHITESPACE_RULE", "EN_QUOTES"];
 
 let languageTool: ChildProcessWithoutNullStreams;
 let ready: boolean = false;
@@ -44,7 +47,7 @@ async function findLanguageToolPort(): Promise<number> {
 
   const { stdout } = await exec(`lsof -Pan -p ${pid} -i`);
 
-  const result = /TCP 127\.0\.0\.1:(\d{4})/g.exec(stdout);
+  const result = /TCP 127\.0\.0\.1:(\d{4}\d?)/g.exec(stdout);
 
   if (!result) {
     throw new Error("Cant find LanguageTool port");
@@ -103,9 +106,14 @@ async function startLanguageTool(): Promise<ChildProcess> {
 export async function languageToolCheck(
   text: string,
 ): Promise<LanguageToolResponse> {
+  const data = JSON.stringify({ annotation: toAnnotation(text) });
+
+  logger.info(data);
+
   const params = new URLSearchParams();
   params.append("language", "auto");
-  params.append("text", text);
+  params.append("data", data);
+  params.append("disabledRules", DISABLED_RULES.join(","));
 
   const response = await fetch(`${url}:${port}/v2/check`, {
     method: "post",
