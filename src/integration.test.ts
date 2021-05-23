@@ -278,5 +278,41 @@ How are you doiing?
         },
       });
     });
+
+    test("List", async () => {
+      // given
+      const text = `
+This is a list:
+- how are you **doiing**?
+- second item
+
+This is the end of this list.
+How are you doiing?`;
+
+      const document = TextDocument.create("file.md", "markdown", 1, text);
+      // when
+      const diagnostics = await getDiagnostics(document);
+      // then
+      expect(diagnostics[0].range).toEqual({
+        start: {
+          line: 2,
+          character: 16,
+        },
+        end: {
+          line: 2,
+          character: 22,
+        },
+      });
+      expect(diagnostics[1].range).toEqual({
+        start: {
+          line: 6,
+          character: 12,
+        },
+        end: {
+          line: 6,
+          character: 18,
+        },
+      });
+    });
   });
 });

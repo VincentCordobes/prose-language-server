@@ -31,6 +31,8 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
 
   switch (node.type) {
     case "link":
+    case "tight_list":
+    case "list_item":
     case "paragraph": {
       annotations.push(...node.children.flatMap(buildAnnotation));
       break;
@@ -85,7 +87,13 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
       break;
     }
 
+    case "list_marker": {
+      annotations.push({ text: "— " });
+      break;
+    }
+
     default:
+      logger.warn(`Unandled node type "${node.type}"`);
       break;
   }
   return annotations;
