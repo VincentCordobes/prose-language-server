@@ -16,14 +16,16 @@ import logger from "./logger";
 import { initLanguageTool, LanguageToolError } from "./language_tool";
 import { getCodeActions, getDiagnostics } from "./features";
 
-process.on("unhandledRejection", (e) => {
-  logger.error(formatError(`Unhandled exception`, e));
-});
-
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
 
 logger.init(connection.console);
+
+process.on("unhandledRejection", (e: any) => {
+  logger.error(formatError(`Unhandled exception`, e));
+
+  connection.window.showErrorMessage(e.message);
+});
 
 function handleLanguageToolNotFound(e: LanguageToolError) {
   if (e === LanguageToolError.LanguageToolNotFound) {

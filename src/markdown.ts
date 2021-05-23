@@ -33,11 +33,39 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
     case "link":
     case "tight_list":
     case "list_item":
+    case "atx_heading":
+    case "heading_content":
     case "paragraph": {
       annotations.push(...node.children.flatMap(buildAnnotation));
       break;
     }
 
+    case "atx_h1_marker": {
+      annotations.push({ markup: "#" });
+      break;
+    }
+    case "atx_h2_marker": {
+      annotations.push({ markup: "##" });
+      break;
+    }
+    case "atx_h3_marker": {
+      annotations.push({ markup: "###" });
+      break;
+    }
+    case "atx_h4_marker": {
+      annotations.push({ markup: "####" });
+      break;
+    }
+    case "atx_h5_marker": {
+      annotations.push({ markup: "#####" });
+      break;
+    }
+    case "atx_h6_marker": {
+      annotations.push({ markup: "######" });
+      break;
+    }
+
+    // TODO: case "hard_line_break":
     case "soft_line_break": {
       annotations.push({ text: "\n" });
       break;
@@ -94,7 +122,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
 
     default:
       logger.warn(`Unandled node type "${node.type}"`);
-      break;
+    // throw new Error(`Unandled node type "${node.type}"`);
   }
   return annotations;
 }

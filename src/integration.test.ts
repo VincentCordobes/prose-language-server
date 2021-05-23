@@ -314,5 +314,43 @@ How are you doiing?`;
         },
       });
     });
+
+    test("Heading", async () => {
+      // given
+      const text = `
+# This is a heading
+
+
+## With a sub-heading
+### How are you doiing ?
+
+Here are some content.
+How are you doiing?`;
+
+      const document = TextDocument.create("file.md", "markdown", 1, text);
+      // when
+      const diagnostics = await getDiagnostics(document);
+      // then
+      expect(diagnostics[0].range).toEqual({
+        start: {
+          line: 5,
+          character: 16,
+        },
+        end: {
+          line: 5,
+          character: 22,
+        },
+      });
+      expect(diagnostics[1].range).toEqual({
+        start: {
+          line: 8,
+          character: 12,
+        },
+        end: {
+          line: 8,
+          character: 18,
+        },
+      });
+    });
   });
 });
