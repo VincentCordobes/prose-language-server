@@ -352,5 +352,27 @@ How are you doiing?`;
         },
       });
     });
+    test("Trailing whitespace", async () => {
+      // given
+      const text = `
+# This is a heading   
+
+How are you doiing?`;
+
+      const document = TextDocument.create("file.md", "markdown", 1, text);
+      // when
+      const diagnostics = await getDiagnostics(document);
+      // then
+      expect(diagnostics[0].range).toEqual({
+        start: {
+          line: 3,
+          character: 12,
+        },
+        end: {
+          line: 3,
+          character: 18,
+        },
+      });
+    });
   });
 });

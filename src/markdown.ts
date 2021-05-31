@@ -122,13 +122,17 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
 
     default:
       logger.warn(`Unandled node type "${node.type}"`);
-    // throw new Error(`Unandled node type "${node.type}"`);
+      throw new Error(`Unandled node type "${node.type}"`);
   }
   return annotations;
 }
 
 export function toAnnotation(text: string): Annotation[] {
-  const tree = parser.parse(text);
+  const withTrailingWhitespaces = text.replace(/ +$/gm, (match) =>
+    " ".repeat(match.length),
+  );
+
+  const tree = parser.parse(withTrailingWhitespaces);
 
   return buildAnnotation(tree.rootNode);
 }
