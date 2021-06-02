@@ -279,11 +279,49 @@ How are you doiing?
       });
     });
 
-    test("List", async () => {
+    test("Tight list", async () => {
       // given
       const text = `
 This is a list:
 - how are you **doiing**?
+- second item
+  a little special
+
+This is the end of this list.
+How are you doiing?`;
+
+      const document = TextDocument.create("file.md", "markdown", 1, text);
+      // when
+      const diagnostics = await getDiagnostics(document);
+      // then
+      expect(diagnostics[0].range).toEqual({
+        start: {
+          line: 2,
+          character: 16,
+        },
+        end: {
+          line: 2,
+          character: 22,
+        },
+      });
+      expect(diagnostics[1].range).toEqual({
+        start: {
+          line: 7,
+          character: 12,
+        },
+        end: {
+          line: 7,
+          character: 18,
+        },
+      });
+    });
+
+    test("Loose list", async () => {
+      // given
+      const text = `
+This is a list:
+- how are you **doiing**?
+
 - second item
 
 This is the end of this list.
@@ -305,11 +343,11 @@ How are you doiing?`;
       });
       expect(diagnostics[1].range).toEqual({
         start: {
-          line: 6,
+          line: 7,
           character: 12,
         },
         end: {
-          line: 6,
+          line: 7,
           character: 18,
         },
       });

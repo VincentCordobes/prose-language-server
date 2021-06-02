@@ -32,6 +32,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
   switch (node.type) {
     case "link":
     case "tight_list":
+    case "loose_list":
     case "list_item":
     case "atx_heading":
     case "heading_content":
@@ -128,7 +129,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
 }
 
 export function toAnnotation(text: string): Annotation[] {
-  const withTrailingWhitespaces = text.replace(/ +$/gm, (match) =>
+  const withTrailingWhitespaces = text.replace(/( +$)|(^ +)/gm, (match) =>
     " ".repeat(match.length),
   );
 
