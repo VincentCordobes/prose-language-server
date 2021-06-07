@@ -412,5 +412,29 @@ How are you doiing?`;
         },
       });
     });
+
+    test("Block quote", async () => {
+      // given
+      const text = `
+> This is a block quote
+> How are you doiing?
+
+That's niice!`;
+
+      const document = TextDocument.create("file.md", "markdown", 1, text);
+      // when
+      const diagnostics = await getDiagnostics(document);
+      // then
+      expect(diagnostics[0].range).toEqual({
+        start: {
+          line: 2,
+          character: 14,
+        },
+        end: {
+          line: 2,
+          character: 20,
+        },
+      });
+    });
   });
 });

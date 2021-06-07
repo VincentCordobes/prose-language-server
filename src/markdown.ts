@@ -36,6 +36,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
     case "list_item":
     case "atx_heading":
     case "heading_content":
+    case "block_quote":
     case "paragraph": {
       annotations.push(...node.children.flatMap(buildAnnotation));
       break;
@@ -129,11 +130,12 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
 }
 
 export function toAnnotation(text: string): Annotation[] {
-  const withTrailingWhitespaces = text.replace(/( +$)|(^ +)/gm, (match) =>
+  // Replace trailing whitespaces and block quote markerswith unbreakable space
+  const cleanedText = text.replace(/( +$)|(^ +)|(^>)/gm, (match) =>
     " ".repeat(match.length),
   );
 
-  const tree = parser.parse(withTrailingWhitespaces);
+  const tree = parser.parse(cleanedText);
 
   return buildAnnotation(tree.rootNode);
 }
