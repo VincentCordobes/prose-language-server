@@ -1,13 +1,17 @@
 import {
   CodeAction,
   CodeActionKind,
+  Command,
   Diagnostic,
   DiagnosticRelatedInformation,
+  ExecuteCommandParams,
 } from "vscode-languageserver";
 import { Range, TextDocument } from "vscode-languageserver-textdocument";
-import { languageToolCheck } from "./language_tool";
+import { addWord, languageToolCheck } from "./language_tool";
 import logger from "./logger";
 import { rangeOverlaps } from "./utils";
+
+const ADD_COMMAND = "word.add";
 
 export async function getDiagnostics(
   textDocument: TextDocument,
@@ -77,5 +81,28 @@ export function getCodeActions(
     },
   }));
 
-  return codeActions;
+  logger.log(JSON.stringify(range));
+  const defaultCodeActions: CodeAction[] = lineDiagnostics
+    .map((diagnostic) => document.getText(diagnostic.range))
+    .filter((text) => !text.includes(" "))
+    .map((word) => {
+      const title = `Add ${word} to dictionnary`;
+      return {
+        title,
+        kind: CodeActionKind.QuickFix,
+        command: Command.create(title, ADD_COMMAND, word),
+      };
+    });
+
+  return [...defaultCodeActions, ...codeActions];
+}
+
+export async function executeCommand(params: ExecuteCommandParams) {
+  if (params.command === ADD_COMMAND) {
+    const word: string = params.arguments && params.arguments[0];
+    logger.info(JSON.stringify({ word }));
+    if (word) {
+      await addWord(word);
+    }
+  }
 }

@@ -14,7 +14,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { formatError, debounce } from "./utils";
 import logger from "./logger";
 import { initLanguageTool, LanguageToolError } from "./language_tool";
-import { getCodeActions, getDiagnostics } from "./features";
+import { executeCommand, getCodeActions, getDiagnostics } from "./features";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -118,6 +118,7 @@ export function listen(): void {
   connection.onCodeAction(handleCodeAction);
   connection.onCompletion(handleCompletion);
   connection.onCompletionResolve(resolveCompletion);
+  connection.onExecuteCommand(executeCommand);
 
   documents.listen(connection);
   connection.listen();

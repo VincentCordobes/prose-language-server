@@ -47,7 +47,7 @@ async function findLanguageToolPort(): Promise<number> {
 
   const { stdout } = await exec(`lsof -Pan -p ${pid} -i`);
 
-  const result = /TCP 127\.0\.0\.1:(\d{4}\d?)/g.exec(stdout);
+  const result = /TCP .*:(\d{4}\d?)/g.exec(stdout);
 
   if (!result) {
     throw new Error("Cant find LanguageTool port");
@@ -103,6 +103,21 @@ async function startLanguageTool(): Promise<ChildProcess> {
   });
 }
 
+type languageToolCommand = "check" | "words/add";
+
+async function request(endpoint: languageToolCommand, params: URLSearchParams) {
+  const response = await fetch(`${url}:${port}/v2/${endpoint}`, {
+    method: "post",
+    body: params,
+  });
+
+  if (!response.ok) {
+    throw new Error(response.statusText);
+  }
+
+  return response.json();
+}
+
 export async function languageToolCheck(
   text: string,
 ): Promise<LanguageToolResponse> {
@@ -115,16 +130,16 @@ export async function languageToolCheck(
   params.append("data", data);
   params.append("disabledRules", DISABLED_RULES.join(","));
 
-  const response = await fetch(`${url}:${port}/v2/check`, {
-    method: "post",
-    body: params,
-  });
+  return request("check", params);
+}
 
-  if (!response.ok) {
-    throw new Error(response.statusText);
-  }
+export async function addWord(word: string): Promise<LanguageToolResponse> {
+  const params = new URLSearchParams();
+  params.append("word", word);
+  params.append("username", "toto");
+  params.append("apiKey", "toto");
 
-  return response.json();
+  return request("words/add", params);
 }
 
 export async function getLanguageToolVersion(): Promise<string> {
