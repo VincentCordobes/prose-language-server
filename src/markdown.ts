@@ -105,6 +105,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
       break;
     }
 
+    case "setext_heading":
     case "email_autolink":
     case "uri_autolink":
     case "text": {
