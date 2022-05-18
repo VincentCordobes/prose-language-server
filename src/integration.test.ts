@@ -316,6 +316,78 @@ How are you doiing?`;
       });
     });
 
+    test("Tight list", async () => {
+      // given
+      const text = `
+This is a list:
+1. how are you **doiing**?
+2. second item
+  a little special
+
+This is the end of this list.
+How are you doiing?`;
+
+      const document = TextDocument.create("file.md", "markdown", 1, text);
+      // when
+      const diagnostics = await getDiagnostics(document);
+      // then
+      expect(diagnostics[0].range).toEqual({
+        start: {
+          line: 2,
+          character: 17,
+        },
+        end: {
+          line: 2,
+          character: 23,
+        },
+      });
+      expect(diagnostics[1].range).toEqual({
+        start: {
+          line: 7,
+          character: 12,
+        },
+        end: {
+          line: 7,
+          character: 18,
+        },
+      });
+    });
+
+    test("Task list items (extension)", async () => {
+      // given
+      const text = `
+This is a task list:
+- [x] pretty thing 
+- [x] How are you doiing?
+
+That's niice!`;
+
+      const document = TextDocument.create("file.md", "markdown", 1, text);
+      // when
+      const diagnostics = await getDiagnostics(document);
+      // then
+      expect(diagnostics[0].range).toEqual({
+        start: {
+          line: 3,
+          character: 18,
+        },
+        end: {
+          line: 3,
+          character: 24,
+        },
+      });
+      expect(diagnostics[1].range).toEqual({
+        start: {
+          line: 5,
+          character: 7,
+        },
+        end: {
+          line: 5,
+          character: 12,
+        },
+      });
+    });
+
     test("Loose list", async () => {
       // given
       const text = `
@@ -505,6 +577,31 @@ How are you doiing?`;
         },
         end: {
           line: 4,
+          character: 18,
+        },
+      });
+    });
+
+    test("Thematic break", async () => {
+      // given
+      const text = `
+This is a link.
+
+---
+
+How are you doiing?`;
+
+      const document = TextDocument.create("file.md", "markdown", 1, text);
+      // when
+      const diagnostics = await getDiagnostics(document);
+      // then
+      expect(diagnostics[0].range).toEqual({
+        start: {
+          line: 5,
+          character: 12,
+        },
+        end: {
+          line: 5,
           character: 18,
         },
       });

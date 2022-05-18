@@ -34,6 +34,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
     case "tight_list":
     case "loose_list":
     case "list_item":
+    case "task_list_item":
     case "atx_heading":
     case "heading_content":
     case "block_quote":
@@ -88,6 +89,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
     }
 
     case "code_span":
+    case "thematic_break":
     case "fenced_code_block": {
       annotations.push({ markup: node.text });
       break;
@@ -108,6 +110,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
     case "setext_heading":
     case "email_autolink":
     case "uri_autolink":
+    case "task_list_item_marker":
     case "text": {
       annotations.push({ text: node.text });
       break;
@@ -121,7 +124,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
     }
 
     case "list_marker": {
-      annotations.push({ text: "— " });
+      annotations.push({ markup: `${node.text} `, interpretAs: "— " });
       break;
     }
 
