@@ -4,7 +4,7 @@ import { getDiagnostics } from "./features";
 
 jest.setTimeout(30000);
 
-describe("Check text", () => {
+describe.only("Check text", () => {
   beforeAll(() => initLanguageTool());
   afterAll(() => stopLanguageTool());
 
@@ -20,14 +20,14 @@ describe("Check text", () => {
       // then
       expect(diagnostics).toEqual([
         expect.objectContaining({
-          message: "Possible spelling mistake found",
+          message: "Possible spelling mistake found.",
           range: {
             start: { character: 25, line: 0 },
             end: { character: 31, line: 0 },
           },
         }),
         expect.objectContaining({
-          message: 'Did you mean "makes"?',
+          message: "After ‘It’, use the third-person verb form “makes”.",
           range: {
             start: { character: 3, line: 1 },
             end: { character: 7, line: 1 },
@@ -433,6 +433,30 @@ That's niice!`;
         end: {
           line: 2,
           character: 20,
+        },
+      });
+    });
+
+    test("Uri autolink", async () => {
+      // given
+      const text = `
+This is a link.
+https://www.google.com/
+
+How are you doiing?`;
+
+      const document = TextDocument.create("file.md", "markdown", 1, text);
+      // when
+      const diagnostics = await getDiagnostics(document);
+      // then
+      expect(diagnostics[0].range).toEqual({
+        start: {
+          line: 4,
+          character: 12,
+        },
+        end: {
+          line: 4,
+          character: 18,
         },
       });
     });

@@ -105,6 +105,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
       break;
     }
 
+    case "uri_autolink":
     case "text": {
       annotations.push({ text: node.text });
       break;
