@@ -7,9 +7,9 @@ import {
   ExecuteCommandParams,
 } from "vscode-languageserver";
 import { Range, TextDocument } from "vscode-languageserver-textdocument";
-import { addWord, languageToolCheck } from "./language_tool";
-import logger from "./logger";
-import { rangeOverlaps } from "./utils";
+import { addWord, languageToolCheck } from "./language_tool.js";
+import logger from "./logger.js";
+import { rangeOverlaps } from "./utils/index.js";
 
 const ADD_COMMAND = "word.add";
 

@@ -8,13 +8,13 @@ import {
   ProposedFeatures,
   TextDocumentSyncKind,
   ServerCapabilities,
-} from "vscode-languageserver/node";
+} from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { formatError, debounce } from "./utils";
-import logger from "./logger";
-import { initLanguageTool, LanguageToolError } from "./language_tool";
-import { executeCommand, getCodeActions, getDiagnostics } from "./features";
+import { formatError, debounce } from "./utils/index.js";
+import logger from "./logger.js";
+import { initLanguageTool } from "./language_tool.js";
+import { executeCommand, getCodeActions, getDiagnostics } from "./features.js";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -27,19 +27,10 @@ process.on("unhandledRejection", (e: any) => {
   connection.window.showErrorMessage(e.message);
 });
 
-function handleLanguageToolNotFound(e: LanguageToolError) {
-  if (e === LanguageToolError.LanguageToolNotFound) {
-    connection.window.showWarningMessage(
-      "LanguageTool not found. Please install it.",
-    );
-  }
-  process.exit(1);
-}
-
 async function initialize() {
   logger.info("Initialized server");
 
-  await initLanguageTool().catch(handleLanguageToolNotFound);
+  await initLanguageTool();
 
   const serverCapabilities: ServerCapabilities = {
     textDocumentSync: TextDocumentSyncKind.Incremental,

@@ -1,6 +1,6 @@
 import Parser from "tree-sitter";
 import Markdown from "tree-sitter-markdown";
-import logger from "./logger";
+import logger from "./logger.js";
 
 const parser = new Parser();
 parser.setLanguage(Markdown);
@@ -136,7 +136,7 @@ function buildAnnotation(node: Parser.SyntaxNode): Annotation[] {
 }
 
 export function toAnnotation(text: string): Annotation[] {
-  // Replace trailing whitespaces and block quote markerswith unbreakable space
+  // Replace trailing whitespaces and block quote markers with nbsp
   const cleanedText = text.replace(/( +$)|(^ +)|(^>)/gm, (match) =>
     " ".repeat(match.length),
   );

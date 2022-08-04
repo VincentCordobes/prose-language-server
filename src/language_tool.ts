@@ -4,13 +4,13 @@ import {
   spawn,
 } from "child_process";
 import childProcess from "child_process";
-import fetch from "node-fetch";
+import fetch from "isomorphic-unfetch";
 import { URLSearchParams } from "url";
 import util from "util";
-import { LanguageToolResponse } from "./language_tool_types";
-import logger from "./logger";
 import getPort from "get-port";
-import { toAnnotation } from "./markdown";
+import { LanguageToolResponse } from "./language_tool_types.js";
+import logger from "./logger.js";
+import { toAnnotation } from "./markdown.js";
 
 const exec = util.promisify(childProcess.exec);
 
@@ -20,10 +20,6 @@ let languageTool: ChildProcessWithoutNullStreams;
 let ready: boolean = false;
 let url: string = "http://localhost";
 let port: number;
-
-export enum LanguageToolError {
-  LanguageToolNotFound,
-}
 
 async function getLanguageToolPID(): Promise<string> {
   const { stdout } = await exec("ps aux");
@@ -66,7 +62,7 @@ async function startLanguageTool(): Promise<ChildProcess> {
   port = await getPort();
 
   return new Promise((resolve, reject) => {
-    languageTool = spawn("languagetool-server", ["--port", String(port)], {
+    languageTool = spawn("languagetool", ["--http", "--port", String(port)], {
       detached: true,
     });
 
@@ -81,7 +77,7 @@ async function startLanguageTool(): Promise<ChildProcess> {
       logger.error(err);
 
       if (err.code === "ENOENT") {
-        reject(LanguageToolError.LanguageToolNotFound);
+        reject(new Error("LanguageTool not found"));
       }
     });
 
@@ -105,7 +101,10 @@ async function startLanguageTool(): Promise<ChildProcess> {
 
 type languageToolCommand = "check" | "words/add";
 
-async function request(endpoint: languageToolCommand, params: URLSearchParams) {
+async function request(
+  endpoint: languageToolCommand,
+  params: URLSearchParams,
+): Promise<any> {
   const response = await fetch(`${url}:${port}/v2/${endpoint}`, {
     method: "post",
     body: params,
